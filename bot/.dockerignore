@@ -1,2 +1,4 @@
 venv
 *_history.txt
+.idea
+__pycache__
