@@ -1,0 +1,6 @@
+venv
+*_history.txt
+.idea
+__pycache__
+.env
+compose.yaml
