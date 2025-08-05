@@ -4,6 +4,8 @@ from fake_useragent import UserAgent
 from loguru import logger
 import os
 
+from .ai_formatter import ask_model
+
 
 URL = "https://habr.com"
 FILTERS = {
@@ -11,62 +13,17 @@ FILTERS = {
     "информационная безопасность*"
 }
 headers = {"User-Agent": UserAgent().chrome}
-links_history_path = os.path.join(os.path.dirname(__file__), "habr_com_history.txt")
-
-
-def ask_model(text: str) -> str:
-    url = "http://localhost:1234/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json"
-    }
-    system_prompt = """
-        Ты — редактор Telegram-канала.
-
-        Твоя задача:
-        Преобразуй HTML-новость в связный, короткий и ясный пост для Telegram. Пиши цельным текстом, без маркированных списков. Не упрощай чрезмерно — текст должен быть понятным, но не примитивным. Передай контекст и суть лаконично, в духе качественных новостных медиа.
-
-        Придумай краткий, цепляющий заголовок.
-
-        Оформи пост в Markdown.
-
-        Удали всё лишнее: даты, авторов, ссылки, технические детали, приписки и метки.
-
-        Текст и заголовок на Русском языке!
-
-        В конце текста добавь кодовое слово **rO4e12H@78si*$**, после которого должен следовать простой запрос на английском для Stable Diffusion — чтобы он создал тематическое изображение к посту. Не подписывай и не помечай этот запрос — просто текст. Изображение должно обязательно соответствовать теме поста.
-
-        Описание для Stable Diffusion:
-        — Пиши на английском;
-        — Избегай крупных объектов, близких ракурсов и однообразия;
-        — Стиль изображения должен быть в духе **хакерства**;
-        — Визуал обязательно должен быть связан с содержанием текста.
-
-        Важно:
-        — Не используй структуры вроде «ключевые моменты», «итоги», «факты»;
-        — Не оформляй текст списками;
-        — Не дублируй очевидное (например, что закон подписал Путин, если это не добавляет смысла);
-        — Один абзац — одна мысль. Весь пост должен состоять из 2–4 абзацев максимум.
-
-        На выходе — только готовый пост для Telegram.
-    """
-    payload = {
-        "model": "google/gemma-3-4b",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": text}
-        ],
-        "temperature": 0.7,
-        "max_tokens": -1,
-        "stream": False
-    }
-
-    response = requests.post(url, json=payload, headers=headers)
-    response.raise_for_status()  # Поднимет исключение при ошибке
-    return response.json()["choices"][0]["message"]["content"]    
+links_history_path = os.path.join(
+    os.path.dirname(__file__),
+    f"history/{os.path.basename(__file__)[:-3]}_history.txt"
+)
 
 
 def get_links_history() -> list[str]:
-    ''' Возвращает списком историю полученных ссылок '''
+    """ Возвращает списком историю полученных ссылок """
+    if not os.path.isfile(links_history_path):
+        logger.info(f"Файл \"{links_history_path}\" не существует.")
+        return []
     with open(links_history_path, 'r') as file:
         history = [line.strip() for line in file]
         logger.info(f"Загружено {len(history)} ссылок из истории")
@@ -135,7 +92,6 @@ def generate_telegram_post(url):
 
 
 if __name__ == "__main__":
-
     new_links = habr_com_scraper()
 
     if new_links:
@@ -145,9 +101,8 @@ if __name__ == "__main__":
                 logger.debug(f"Сохраняю ссылку в историю: {link}")
 
         for link in new_links:
-            with open("texts.txt", 'a') as f:
-                text = generate_telegram_post(link)
-                f.write(text + "\n\n")
+            text, image_prompt = generate_telegram_post(link)
+            print(text + "\n" + image_prompt + "\n-----------\n\n")
 
         logger.success("Все новые ссылки сохранены")
     else:

@@ -6,9 +6,12 @@ from scrapers import scrape_posts
 
 router = Router(name=__name__)
 
-@router.message(Command('/scrape'))
+@router.message(Command('scrape'))
 async def start_command(message: Message) -> None:
     await message.answer(text="Парсинг начался!")
     posts = scrape_posts()
     for i in posts:
-        print(i)
+        if len(i) > 1000:
+            print(i)
+            continue
+        await message.answer(text=i, parse_mode="HTML")
