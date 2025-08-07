@@ -2,7 +2,10 @@ services:
   bot:
     build: ./bot
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}
+    # Установить токен для Telegram бот
+      - BOT_TOKEN= ...............
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
   prometheus:
@@ -31,7 +34,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    # Пароль для grafana (ну пока так)
+      - GF_SECURITY_ADMIN_PASSWORD= ...............
     volumes:
       - grafana-storage:/var/lib/grafana
     networks:
@@ -45,3 +49,4 @@ volumes:
 
 networks:
   monitoring:
+  default:
