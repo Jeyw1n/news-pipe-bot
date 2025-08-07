@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 from loguru import logger
-import os
+import os, time
 
 from .ai_formatter import ask_model
 
@@ -10,7 +10,7 @@ from .ai_formatter import ask_model
 URL = "https://habr.com"
 FILTERS = {
     "информационная безопасность",
-    "информационная безопасность*"
+    "информационная безопасность*",
 }
 headers = {"User-Agent": UserAgent().chrome}
 links_history_path = os.path.join(
@@ -64,6 +64,8 @@ def habr_com_scraper() -> list[str] | None:
             soup = BeautifulSoup(response.text, 'lxml')
             tags = [tag.text.lower() for tag in soup.find("div", class_="tm-publication-hubs").find_all("span")]
 
+            time.sleep(1)
+
             # Если содержатся нужные нам теги, продолжаем
             if set(tags) & FILTERS:
                 logger.info(f"Подходящая статья найдена: {link}")
@@ -80,15 +82,19 @@ def habr_com_scraper() -> list[str] | None:
 
 
 def generate_telegram_post(url):
-    # Сначала получим текст со страницы
-    response = requests.get(url, headers)
-    soup = BeautifulSoup(response.text, "lxml")
-    raw_text = soup.find("div", attrs={"id": "post-content-body"})
-    # Теперь обработаем его через нейросеть
-    if raw_text is None:
-        return "Ошибка: не найдено содержимое статьи"
-    text = raw_text.get_text(separator="\n", strip=True)
-    return ask_model(text)
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Проверка на ошибки HTTP
+        soup = BeautifulSoup(response.text, "lxml")
+        content_block = soup.find("div", {"id": "post-content-body"})
+
+        if not content_block:
+            return "Ошибка: не найдено содержимое статьи"
+
+        return ask_model(content_block.get_text(separator="\n", strip=True))
+
+    except Exception as e:
+        logger.error(f"Ошибка при получении контента: {str(e)}")
 
 
 if __name__ == "__main__":
@@ -101,8 +107,8 @@ if __name__ == "__main__":
                 logger.debug(f"Сохраняю ссылку в историю: {link}")
 
         for link in new_links:
-            text, image_prompt = generate_telegram_post(link)
-            print(text + "\n" + image_prompt + "\n-----------\n\n")
+            text = generate_telegram_post(link)
+            print(text + "\n-----------\n\n")
 
         logger.success("Все новые ссылки сохранены")
     else:
