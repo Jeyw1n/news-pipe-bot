@@ -2,6 +2,8 @@ from aiogram import Router
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command
 
+from loguru import logger
+
 from scrapers import scrape_posts
 
 router = Router(name=__name__)
@@ -11,7 +13,11 @@ async def start_command(message: Message) -> None:
     await message.answer(text="Парсинг начался!")
     posts = scrape_posts()
     for i in posts:
+        print("перебор сгенерированных постов")
         if len(i) > 1000:
             print(i)
             continue
-        await message.answer(text=i, parse_mode="HTML")
+        try:
+            await message.answer(text=i)
+        except Exception as ex:
+            logger.error(f"Ошибка отправки обработанного текста: {ex}")
