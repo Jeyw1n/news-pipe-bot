@@ -1,0 +1,1 @@
+from .tgbot_client import MESSAGES_RECEIVED, POSTS_GENERATED, AI_RESPONSE_TIME
